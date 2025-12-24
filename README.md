@@ -43,7 +43,7 @@
 ## 설치 및 실행
 
 ### 요구사항
-- 최신 버전의 웹 브라우저 (Chrome, Firefox, Edge, Safari)
+- 최신 버전의 웹 브라우저 (Chrome, Firefox, Edge, Safari 등)
 - 로컬 웹 서버 (파일 시스템 직접 접근 시 CORS 제한으로 인해 필요)
 
 ### 실행 방법
