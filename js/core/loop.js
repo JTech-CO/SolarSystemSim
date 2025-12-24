@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 
-export function createAnimationLoop(scene, camera, renderer, controls, updateables, cometSystems, sun, selectedTarget, updateDashboard) {
+export function createAnimationLoop(scene, camera, renderer, controls, updateables, cometSystems, sun, selectedTarget, updateDashboardRealTime) {
     const clock = new THREE.Clock();
     let time = 0;
+    const sunPosition = new THREE.Vector3(0, 0, 0);
 
     function animate() {
         requestAnimationFrame(animate);
@@ -29,8 +30,10 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
             const targetPos = new THREE.Vector3();
             selectedTarget.current.getWorldPosition(targetPos);
             
-            const dist = targetPos.distanceTo(new THREE.Vector3(0, 0, 0));
-            updateDashboard('distance', (dist * 100000).toLocaleString() + " km");
+            // Update dashboard with real-time metrics
+            if (updateDashboardRealTime) {
+                updateDashboardRealTime(selectedTarget.current, sunPosition);
+            }
 
             controls.target.lerp(targetPos, 0.1);
         }
