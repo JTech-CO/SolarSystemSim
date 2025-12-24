@@ -62,7 +62,7 @@ import { createPlanetsAndDwarfs } from './objects/planetFactory.js';
 import { createComets } from './objects/cometSystem.js';
 import { setupPanel } from './ui/panel.js';
 import { buildUI, highlightList } from './ui/planetList.js';
-import { focusObject, closeDashboard, updateDashboard } from './ui/dashboard.js';
+import { focusObject, closeDashboard, updateDashboardRealTime } from './ui/dashboard.js';
 
 // ================= GLOBALS =================
 let scene, camera, renderer, controls;
@@ -94,6 +94,14 @@ function init() {
     sun = createSun(scene, objects);
     createPlanetsAndDwarfs(scene, objects, updateables, PLANETS, DWARFS);
     createComets(scene, objects, cometSystems, COMETS);
+    
+    // Function to rebuild UI (for language changes)
+    const rebuildUI = () => {
+        buildUI(PLANETS, DWARFS, COMETS, (mesh) => {
+            focusObject(mesh, controls, selectedTarget);
+        }, highlightList);
+    };
+    
     buildUI(PLANETS, DWARFS, COMETS, (mesh) => {
         focusObject(mesh, controls, selectedTarget);
     }, highlightList);
@@ -109,7 +117,7 @@ function init() {
     const setTopViewHandler = () => {
         setTopView(controls, camera);
     };
-    setupPanel(resetViewHandler, setTopViewHandler);
+    setupPanel(resetViewHandler, setTopViewHandler, rebuildUI);
     document.getElementById('dash-close').onclick = () => closeDashboard(controls, selectedTarget);
 
     // 8. Remove Loader
@@ -118,7 +126,7 @@ function init() {
     }, 800);
 
     // 9. Start Animation
-    const animate = createAnimationLoop(scene, camera, renderer, controls, updateables, cometSystems, sun, selectedTarget, updateDashboard);
+    const animate = createAnimationLoop(scene, camera, renderer, controls, updateables, cometSystems, sun, selectedTarget, updateDashboardRealTime);
     animate();
 }
 
