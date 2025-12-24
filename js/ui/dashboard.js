@@ -88,20 +88,23 @@ export function calculateAllMetrics(mesh, sunPos) {
     const worldPos = new THREE.Vector3();
     mesh.getWorldPosition(worldPos);
     
-    // Calculate distance to sun in meters
-    const distanceMeters = worldPos.distanceTo(sunPos);
+    // Calculate distance to sun in simulation units
+    const distanceSimUnits = worldPos.distanceTo(sunPos);
     
-    // Use orbit value from data if available (it represents AU)
-    // Otherwise estimate from visual position
-    let realDistanceAU = 1;
+    // Convert simulation units to real AU
+    // For planets: orbitRad = data.orbit * CONFIG.scale.orbit + CONFIG.scale.sun
+    // So: realDistanceAU = (distanceSimUnits - CONFIG.scale.sun) / CONFIG.scale.orbit
+    // For comets: they use direct position, so we use a different conversion
+    let realDistanceAU;
     if (data.orbit !== undefined && data.orbit !== null) {
-        // orbit value represents AU directly
-        realDistanceAU = data.orbit;
+        // Planets and dwarfs: use the formula based on pivot structure
+        realDistanceAU = Math.max(0.01, (distanceSimUnits - CONFIG.scale.sun) / CONFIG.scale.orbit);
     } else {
-        // Fallback: estimate from visual distance
-        // CONFIG.scale.orbit units represent AU, so we need to convert
-        const simUnitsPerAU = CONFIG.scale.orbit;
-        realDistanceAU = Math.max(0.01, distanceMeters / simUnitsPerAU);
+        // Comets and other objects: direct distance conversion (approx scale 10 per AU based on comet code)
+        // Comets use scale = 10, and perihelion * 5 for distance
+        // Approximate conversion: 1 sim unit ≈ 0.1 AU (rough estimate)
+        const simUnitsPerAU = CONFIG.scale.orbit || 80;
+        realDistanceAU = Math.max(0.01, distanceSimUnits / simUnitsPerAU);
     }
     const realDistanceMeters = realDistanceAU * AU;
     
