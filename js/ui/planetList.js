@@ -1,9 +1,14 @@
+import { t } from '../utils/i18n.js';
+
 export function buildUI(planets, dwarfs, comets, focusObject, highlightList) {
     const list = document.getElementById('planet-list');
     
-    addCategory(list, "Planets", planets, false, focusObject, highlightList);
-    addCategory(list, "Dwarf Planets", dwarfs, false, focusObject, highlightList);
-    addCategory(list, "Comets", comets, true, focusObject, highlightList);
+    // Clear existing content
+    list.innerHTML = '';
+    
+    addCategory(list, t('list.planets'), planets, false, focusObject, highlightList);
+    addCategory(list, t('list.dwarfPlanets'), dwarfs, false, focusObject, highlightList);
+    addCategory(list, t('list.comets'), comets, true, focusObject, highlightList);
 }
 
 function addCategory(parent, title, items, isComet, focusObject, highlightList) {
