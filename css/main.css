@@ -1,0 +1,43 @@
+:root {
+    --bg-color: #050505;
+    --panel-bg: #001a2d;
+    --border-color: #405060;
+    --accent-color: #00ffff;
+    --text-main: #c0d0e0;
+    --text-dim: #aaaaaa;
+    --text-warn: #ffcc00;
+    --text-error: #ff3333;
+    --font-display: "Courier New", Courier, monospace;
+    --font-mono: "Courier New", Courier, monospace;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #001020 0%, #050505 100%);
+    color: var(--text-main);
+    font-family: var(--font-display);
+    user-select: none;
+    width: 100vw;
+    height: 100vh;
+}
+
+canvas {
+    display: block;
+    outline: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #405060;
+    border-radius: 4px;
+}
+
