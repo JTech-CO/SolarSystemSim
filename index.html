@@ -21,6 +21,7 @@
             <div id="cam-controls">
                 <button id="btn-reset">Reset</button>
                 <button id="btn-top">Top View</button>
+                <button id="btn-lang">한/EN</button>
             </div>
         </div>
 
@@ -30,13 +31,23 @@
 
         <div id="dashboard" class="panel hidden">
             <div class="header">
-                <h2 id="dash-name">NAME</h2>
+                <h2 id="dash-title">행성 계기판</h2>
                 <button id="dash-close">×</button>
             </div>
             <div class="content">
-                <div class="data-row"><span>Type</span> <span id="val-type">-</span></div>
-                <div class="data-row"><span>Distance</span> <span id="val-dist">0 km</span></div>
-                <div class="data-row"><span>Radius</span> <span id="val-rad">0 km</span></div>
+                <div class="data-row"><span id="label-name">행성명</span> <span id="val-name">-</span></div>
+                <div class="data-row"><span id="label-distance">현재 태양 거리</span> <span id="val-distance">-</span></div>
+                <div class="data-row"><span id="label-orbital-speed">현재 공전 속도</span> <span id="val-orbital-speed">-</span></div>
+                <div class="data-row"><span id="label-mass">질량</span> <span id="val-mass">-</span></div>
+                <div class="data-row"><span id="label-radius">평균 반지름</span> <span id="val-radius">-</span></div>
+                <div class="data-row"><span id="label-surface-gravity">표면 중력가속도</span> <span id="val-surface-gravity">-</span></div>
+                <div class="data-row"><span id="label-solar-gravity">현재 태양 중력가속도</span> <span id="val-solar-gravity">-</span></div>
+                <div class="data-row"><span id="label-centrifugal-accel">현재 원심가속도</span> <span id="val-centrifugal-accel">-</span></div>
+                <div class="data-row"><span id="label-orbital-period">공전 주기</span> <span id="val-orbital-period">-</span></div>
+                <div class="data-row"><span id="label-rotation-period">자전 주기</span> <span id="val-rotation-period">-</span></div>
+                <div class="data-row"><span id="label-rotation-angular-vel">지전 각속도</span> <span id="val-rotation-angular-vel">-</span></div>
+                <div class="data-row"><span id="label-rotation-speed">실시간 지전 속도</span> <span id="val-rotation-speed">-</span></div>
+                <div class="data-row"><span id="label-rotation-accel">실시간 자전 가속도</span> <span id="val-rotation-accel">-</span></div>
                 <div class="desc" id="val-desc"></div>
             </div>
         </div>
