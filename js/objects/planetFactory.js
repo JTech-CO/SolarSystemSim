@@ -127,15 +127,6 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
         updateables.push({ type: 'ellipticalOrbit', obj: pivot, mesh: mesh });
         updateables.push({ type: 'rotate', obj: mesh, rotationPeriod: data.rotationPeriod });
         
-        // Debug: Log first planet creation
-        if (data.name === 'Mercury') {
-            console.log('[Debug] Created planet:', data.name, {
-                updateablesLength: updateables.length,
-                hasOrbitalPeriod: !!data.orbitalPeriod,
-                pivotUserData: pivot.userData
-            });
-        }
-        
         data.meshRef = mesh;
         data.moons?.forEach((m) => {
             m.meshRef = mesh.children.find(c => c.children[0]?.userData.name === m.name)?.children[0];
