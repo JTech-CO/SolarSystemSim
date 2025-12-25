@@ -6,6 +6,18 @@ export function createControls(camera, renderer) {
     controls.dampingFactor = 0.05;
     controls.minDistance = 5;
     controls.maxDistance = 20000;
+    
+    // Track if user is manually controlling
+    let isUserControlling = false;
+    controls.addEventListener('start', () => {
+        isUserControlling = true;
+    });
+    controls.addEventListener('end', () => {
+        isUserControlling = false;
+    });
+    
+    controls.isUserControlling = () => isUserControlling;
+    
     return controls;
 }
 
