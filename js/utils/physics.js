@@ -121,3 +121,115 @@ export function metersToAU(meters) {
     return meters / AU;
 }
 
+/**
+ * Calculate distance in elliptical orbit using true anomaly
+ * @param {number} semiMajorAxis - Semi-major axis in meters
+ * @param {number} eccentricity - Orbital eccentricity (0-1)
+ * @param {number} trueAnomaly - True anomaly in radians
+ * @returns {number} Distance from focus in meters
+ */
+export function calculateEllipticalDistance(semiMajorAxis, eccentricity, trueAnomaly) {
+    if (eccentricity === 0) {
+        // Circular orbit
+        return semiMajorAxis;
+    }
+    return semiMajorAxis * (1 - eccentricity * eccentricity) / (1 + eccentricity * Math.cos(trueAnomaly));
+}
+
+/**
+ * Calculate orbital velocity in elliptical orbit using vis-viva equation
+ * @param {number} distance - Current distance from focus in meters
+ * @param {number} semiMajorAxis - Semi-major axis in meters
+ * @param {number} centralMass - Mass of central body in kg (default: SUN_MASS)
+ * @returns {number} Orbital velocity in m/s
+ */
+export function calculateOrbitalVelocityElliptical(distance, semiMajorAxis, centralMass = SUN_MASS) {
+    if (distance <= 0 || semiMajorAxis <= 0) return 0;
+    if (semiMajorAxis === distance && semiMajorAxis > 0) {
+        // Circular orbit case
+        return Math.sqrt(G * centralMass / distance);
+    }
+    // Vis-viva equation: v = sqrt(GM(2/r - 1/a))
+    return Math.sqrt(G * centralMass * (2 / distance - 1 / semiMajorAxis));
+}
+
+/**
+ * Solve Kepler's equation to find eccentric anomaly from mean anomaly
+ * Uses Newton's method for iterative solution
+ * @param {number} meanAnomaly - Mean anomaly in radians
+ * @param {number} eccentricity - Orbital eccentricity (0-1)
+ * @param {number} tolerance - Convergence tolerance (default: 1e-10)
+ * @param {number} maxIterations - Maximum iterations (default: 50)
+ * @returns {number} Eccentric anomaly in radians
+ */
+export function solveKeplerEquation(meanAnomaly, eccentricity, tolerance = 1e-10, maxIterations = 50) {
+    if (eccentricity === 0) {
+        // Circular orbit
+        return meanAnomaly;
+    }
+    
+    // Initial guess: E = M for small e, or M + e*sin(M) for larger e
+    let E = meanAnomaly;
+    if (eccentricity > 0.8) {
+        E = Math.PI;
+    } else {
+        E = meanAnomaly + eccentricity * Math.sin(meanAnomaly);
+    }
+    
+    for (let i = 0; i < maxIterations; i++) {
+        const f = E - eccentricity * Math.sin(E) - meanAnomaly;
+        const fPrime = 1 - eccentricity * Math.cos(E);
+        
+        if (Math.abs(fPrime) < tolerance) break;
+        
+        const deltaE = f / fPrime;
+        E -= deltaE;
+        
+        if (Math.abs(deltaE) < tolerance) break;
+    }
+    
+    return E;
+}
+
+/**
+ * Calculate true anomaly from mean anomaly
+ * @param {number} meanAnomaly - Mean anomaly in radians
+ * @param {number} eccentricity - Orbital eccentricity (0-1)
+ * @returns {number} True anomaly in radians
+ */
+export function calculateTrueAnomaly(meanAnomaly, eccentricity) {
+    if (eccentricity === 0) {
+        // Circular orbit
+        return meanAnomaly;
+    }
+    
+    const E = solveKeplerEquation(meanAnomaly, eccentricity);
+    
+    // Convert eccentric anomaly to true anomaly
+    // tan(ν/2) = sqrt((1+e)/(1-e)) * tan(E/2)
+    const tanNu2 = Math.sqrt((1 + eccentricity) / (1 - eccentricity)) * Math.tan(E / 2);
+    let trueAnomaly = 2 * Math.atan(tanNu2);
+    
+    // Ensure true anomaly is in [0, 2π]
+    if (trueAnomaly < 0) trueAnomaly += 2 * Math.PI;
+    if (trueAnomaly >= 2 * Math.PI) trueAnomaly -= 2 * Math.PI;
+    
+    return trueAnomaly;
+}
+
+/**
+ * Calculate mean anomaly from time
+ * @param {number} time - Time in seconds since periapsis
+ * @param {number} orbitalPeriod - Orbital period in days
+ * @param {number} initialMeanAnomaly - Initial mean anomaly in radians (default: 0)
+ * @returns {number} Mean anomaly in radians
+ */
+export function calculateMeanAnomaly(time, orbitalPeriod, initialMeanAnomaly = 0) {
+    const periodSeconds = orbitalPeriod * 24 * 3600; // Convert days to seconds
+    const meanMotion = (2 * Math.PI) / periodSeconds; // radians per second
+    const meanAnomaly = initialMeanAnomaly + meanMotion * time;
+    
+    // Normalize to [0, 2π]
+    return meanAnomaly % (2 * Math.PI);
+}
+
