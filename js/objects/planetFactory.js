@@ -1,15 +1,35 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { generateTexture } from '../utils/textureGenerator.js';
+import { AU } from '../utils/physics.js';
 
 export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwarfs) {
     const allBodies = [...planets, ...dwarfs];
     
     allBodies.forEach(data => {
-        const orbitRad = data.orbit * CONFIG.scale.orbit + CONFIG.scale.sun;
+        // Orbital parameters
+        const eccentricity = data.eccentricity !== undefined ? data.eccentricity : 0;
+        const semiMajorAxisAU = data.orbit; // in AU
+        const semiMajorAxisMeters = semiMajorAxisAU * AU; // in meters
+        const semiMajorAxisSim = semiMajorAxisAU * CONFIG.scale.orbit; // in simulation units
+        
+        // Initial mean anomaly (random starting position)
+        const initialMeanAnomaly = Math.random() * Math.PI * 2;
         
         const pivot = new THREE.Object3D();
-        pivot.userData = { speed: data.speed, angle: Math.random() * Math.PI * 2 };
+        pivot.userData = {
+            type: 'ellipticalOrbit',
+            speed: data.speed,
+            semiMajorAxisAU: semiMajorAxisAU,
+            semiMajorAxisMeters: semiMajorAxisMeters,
+            semiMajorAxisSim: semiMajorAxisSim,
+            eccentricity: eccentricity,
+            orbitalPeriod: data.orbitalPeriod,
+            initialMeanAnomaly: initialMeanAnomaly,
+            meanAnomaly: initialMeanAnomaly,
+            trueAnomaly: 0,
+            time: 0
+        };
         scene.add(pivot);
 
         const geo = new THREE.SphereGeometry(data.size * CONFIG.scale.planet, 32, 32);
@@ -22,13 +42,17 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
             emissiveIntensity: 0.15
         });
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.x = orbitRad;
-        mesh.userData = { ...data, isBody: true };
+        
+        // Initial position will be set in animation loop
+        mesh.position.x = semiMajorAxisSim + CONFIG.scale.sun;
+        mesh.userData = { ...data, isBody: true, pivot: pivot };
         pivot.add(mesh);
         objects.push(mesh);
 
+        // Orbit line (using average distance for visualization)
+        const avgOrbitRad = semiMajorAxisSim + CONFIG.scale.sun;
         const orbitLine = new THREE.Mesh(
-            new THREE.RingGeometry(orbitRad - 0.5, orbitRad + 0.5, 128),
+            new THREE.RingGeometry(avgOrbitRad - 0.5, avgOrbitRad + 0.5, 128),
             new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide, transparent: true, opacity: 0.3 })
         );
         orbitLine.rotation.x = Math.PI / 2;
@@ -45,34 +69,48 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
 
         if (data.moons) {
             data.moons.forEach(m => {
+                // Moon orbital parameters (relative to parent planet)
+                const moonEccentricity = m.eccentricity !== undefined ? m.eccentricity : 0;
+                const moonSemiMajorAxisSim = (data.size * CONFIG.scale.planet) * 2 + (m.orbit * 4);
+                const moonInitialMeanAnomaly = Math.random() * Math.PI * 2;
+                
                 const mPivot = new THREE.Object3D();
-                mPivot.userData = { speed: m.speed, angle: Math.random() * Math.PI * 2 };
+                mPivot.userData = {
+                    type: 'ellipticalOrbit',
+                    speed: m.speed,
+                    semiMajorAxisSim: moonSemiMajorAxisSim,
+                    eccentricity: moonEccentricity,
+                    initialMeanAnomaly: moonInitialMeanAnomaly,
+                    meanAnomaly: moonInitialMeanAnomaly,
+                    trueAnomaly: 0,
+                    time: 0,
+                    isMoon: true
+                };
                 mesh.add(mPivot);
 
                 const mGeo = new THREE.SphereGeometry(m.size * CONFIG.scale.planet, 16, 16);
                 const mMat = new THREE.MeshStandardMaterial({ color: m.color[0] });
                 const mMesh = new THREE.Mesh(mGeo, mMat);
                 
-                const dist = (data.size * CONFIG.scale.planet) * 2 + (m.orbit * 4);
-                mMesh.position.x = dist;
-                mMesh.userData = { ...m, type: "Moon", isBody: true, parentName: data.name };
+                mMesh.position.x = moonSemiMajorAxisSim;
+                mMesh.userData = { ...m, type: "Moon", isBody: true, parentName: data.name, pivot: mPivot };
                 mPivot.add(mMesh);
                 objects.push(mMesh);
                 
                 const mOrbit = new THREE.Mesh(
-                    new THREE.RingGeometry(dist - 0.1, dist + 0.1, 32),
+                    new THREE.RingGeometry(moonSemiMajorAxisSim - 0.1, moonSemiMajorAxisSim + 0.1, 32),
                     new THREE.MeshBasicMaterial({ color: 0x666666, side: THREE.DoubleSide, transparent: true, opacity: 0.3 })
                 );
                 mOrbit.rotation.x = Math.PI / 2;
                 mesh.add(mOrbit);
 
-                updateables.push({ type: 'orbit', obj: mPivot });
-                updateables.push({ type: 'rotate', obj: mMesh });
+                updateables.push({ type: 'ellipticalOrbit', obj: mPivot, mesh: mMesh });
+                updateables.push({ type: 'rotate', obj: mMesh, rotationPeriod: m.rotationPeriod });
             });
         }
 
-        updateables.push({ type: 'orbit', obj: pivot });
-        updateables.push({ type: 'rotate', obj: mesh });
+        updateables.push({ type: 'ellipticalOrbit', obj: pivot, mesh: mesh });
+        updateables.push({ type: 'rotate', obj: mesh, rotationPeriod: data.rotationPeriod });
         
         data.meshRef = mesh;
         data.moons?.forEach((m) => {
