@@ -7,13 +7,10 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
     const allBodies = [...planets, ...dwarfs];
     
     allBodies.forEach(data => {
-        // Orbital parameters
         const eccentricity = data.eccentricity !== undefined ? data.eccentricity : 0;
-        const semiMajorAxisAU = data.orbit; // in AU
-        const semiMajorAxisMeters = semiMajorAxisAU * AU; // in meters
-        const semiMajorAxisSim = semiMajorAxisAU * CONFIG.scale.orbit; // in simulation units
-        
-        // Initial mean anomaly (random starting position)
+        const semiMajorAxisAU = data.orbit;
+        const semiMajorAxisMeters = semiMajorAxisAU * AU;
+        const semiMajorAxisSim = semiMajorAxisAU * CONFIG.scale.orbit;
         const initialMeanAnomaly = Math.random() * Math.PI * 2;
         
         const pivot = new THREE.Object3D();
@@ -43,7 +40,6 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
         });
         const mesh = new THREE.Mesh(geo, mat);
         
-        // Calculate initial true anomaly and position
         const initialTrueAnomaly = calculateTrueAnomaly(initialMeanAnomaly, eccentricity);
         const initialDistanceSim = calculateEllipticalDistance(
             semiMajorAxisSim,
@@ -53,15 +49,12 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
         mesh.position.x = CONFIG.scale.sun + initialDistanceSim * Math.cos(initialTrueAnomaly);
         mesh.position.z = initialDistanceSim * Math.sin(initialTrueAnomaly);
         mesh.position.y = 0;
-        
-        // Store initial true anomaly in orbitData
         pivot.userData.trueAnomaly = initialTrueAnomaly;
         
         mesh.userData = { ...data, isBody: true, pivot: pivot };
         pivot.add(mesh);
         objects.push(mesh);
 
-        // Orbit line (using average distance for visualization)
         const avgOrbitRad = semiMajorAxisSim + CONFIG.scale.sun;
         const orbitLine = new THREE.Mesh(
             new THREE.RingGeometry(avgOrbitRad - 0.5, avgOrbitRad + 0.5, 128),
@@ -81,7 +74,6 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
 
         if (data.moons) {
             data.moons.forEach(m => {
-                // Moon orbital parameters (relative to parent planet)
                 const moonEccentricity = m.eccentricity !== undefined ? m.eccentricity : 0;
                 const moonSemiMajorAxisSim = (data.size * CONFIG.scale.planet) * 2 + (m.orbit * 4);
                 const moonInitialMeanAnomaly = Math.random() * Math.PI * 2;
@@ -92,6 +84,7 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
                     speed: m.speed,
                     semiMajorAxisSim: moonSemiMajorAxisSim,
                     eccentricity: moonEccentricity,
+                    orbitalPeriod: m.orbitalPeriod,
                     initialMeanAnomaly: moonInitialMeanAnomaly,
                     meanAnomaly: moonInitialMeanAnomaly,
                     trueAnomaly: 0,
@@ -104,7 +97,6 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
                 const mMat = new THREE.MeshStandardMaterial({ color: m.color[0] });
                 const mMesh = new THREE.Mesh(mGeo, mMat);
                 
-                // Calculate initial position for moon
                 const moonInitialTrueAnomaly = calculateTrueAnomaly(moonInitialMeanAnomaly, moonEccentricity);
                 const moonInitialDistanceSim = calculateEllipticalDistance(
                     moonSemiMajorAxisSim,
@@ -114,8 +106,6 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
                 mMesh.position.x = moonInitialDistanceSim * Math.cos(moonInitialTrueAnomaly);
                 mMesh.position.z = moonInitialDistanceSim * Math.sin(moonInitialTrueAnomaly);
                 mMesh.position.y = 0;
-                
-                // Store initial true anomaly
                 mPivot.userData.trueAnomaly = moonInitialTrueAnomaly;
                 
                 mMesh.userData = { ...m, type: "Moon", isBody: true, parentName: data.name, pivot: mPivot };
