@@ -53,6 +53,44 @@
     flex: 1;
 }
 
+#speed-controls {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+#speed-label {
+    display: block;
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+#speed-label span {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+#speed-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.speed-btn {
+    flex: 1;
+    min-width: 50px;
+    padding: 6px 8px;
+    font-size: 10px;
+}
+
+.speed-btn.active {
+    background: var(--accent-color);
+    color: #000;
+    border-color: var(--accent-color);
+}
+
 button {
     background: #003040;
     border: 1px solid var(--border-color);
