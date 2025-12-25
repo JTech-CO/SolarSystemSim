@@ -18,10 +18,33 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
         const realDt = dt * CONFIG.speed;
         time += realDt;
 
+        // Debug: Log updateables status (first frame only)
+        if (time < 0.1 && updateables.length > 0) {
+            console.log('[Debug] updateables count:', updateables.length);
+            const ellipticalOrbits = updateables.filter(item => item.type === 'ellipticalOrbit');
+            const rotations = updateables.filter(item => item.type === 'rotate');
+            console.log('[Debug] ellipticalOrbit:', ellipticalOrbits.length, 'rotate:', rotations.length);
+            if (ellipticalOrbits.length > 0) {
+                const first = ellipticalOrbits[0];
+                console.log('[Debug] First orbit:', {
+                    hasMesh: !!first.mesh,
+                    hasObj: !!first.obj,
+                    orbitalPeriod: first.obj?.userData?.orbitalPeriod,
+                    time: first.obj?.userData?.time,
+                    meanAnomaly: first.obj?.userData?.meanAnomaly
+                });
+            }
+        }
+
         updateables.forEach(item => {
             if (item.type === 'ellipticalOrbit') {
                 const orbitData = item.obj.userData;
                 const mesh = item.mesh;
+                
+                if (!orbitData || !mesh) {
+                    console.warn('[Debug] Invalid ellipticalOrbit item:', item);
+                    return;
+                }
                 
                 orbitData.time += dt;
                 
@@ -46,8 +69,25 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
                 );
                 
                 const baseDistance = orbitData.isMoon ? 0 : CONFIG.scale.sun;
-                mesh.position.x = baseDistance + distanceSim * Math.cos(orbitData.trueAnomaly);
-                mesh.position.z = distanceSim * Math.sin(orbitData.trueAnomaly);
+                const newX = baseDistance + distanceSim * Math.cos(orbitData.trueAnomaly);
+                const newZ = distanceSim * Math.sin(orbitData.trueAnomaly);
+                
+                // Debug: Log position changes for first planet (first few frames)
+                if (time < 1.0 && mesh.userData?.name === 'Mercury') {
+                    console.log('[Debug] Mercury position update:', {
+                        time: orbitData.time.toFixed(3),
+                        meanAnomaly: orbitData.meanAnomaly.toFixed(6),
+                        trueAnomaly: orbitData.trueAnomaly.toFixed(6),
+                        distanceSim: distanceSim.toFixed(2),
+                        oldX: mesh.position.x.toFixed(2),
+                        newX: newX.toFixed(2),
+                        oldZ: mesh.position.z.toFixed(2),
+                        newZ: newZ.toFixed(2)
+                    });
+                }
+                
+                mesh.position.x = newX;
+                mesh.position.z = newZ;
                 mesh.position.y = 0;
                 
             } else if (item.type === 'rotate') {
