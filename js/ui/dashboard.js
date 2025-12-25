@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import {
     calculateOrbitalVelocity,
+    calculateOrbitalVelocityElliptical,
     calculateGravitationalAcceleration,
     calculateCentrifugalAcceleration,
     calculateRotationAngularVelocity,
+    calculateEllipticalDistance,
     formatPeriod,
     formatPeriodEnglish,
     formatRotationPeriod,
@@ -16,19 +18,19 @@ import { t, getLanguage } from '../utils/i18n.js';
 
 let currentMesh = null;
 let sunPosition = new THREE.Vector3(0, 0, 0);
-
-/**
- * Set sun position for calculations
- * @param {THREE.Vector3} pos - Sun position
- */
-export function setSunPosition(pos) {
-    sunPosition.copy(pos);
-}
+let previousRotation = 0;
+let previousAngularVelocity = 0;
+let lastUpdateTime = 0;
 
 export function focusObject(mesh, controls, selectedTarget) {
     if (!mesh) return;
     selectedTarget.current = mesh;
     currentMesh = mesh;
+    
+    // Reset rotation tracking
+    previousRotation = mesh.rotation.y;
+    previousAngularVelocity = 0;
+    lastUpdateTime = 0;
     
     const dash = document.getElementById('dashboard');
     const d = mesh.userData;
@@ -37,8 +39,8 @@ export function focusObject(mesh, controls, selectedTarget) {
     // Update labels
     updateLabels();
     
-    // Calculate and display all metrics
-    calculateAllMetrics(mesh, sunPosition);
+    // Calculate and display all metrics (initial calculation, dt=0)
+    calculateAllMetrics(mesh, sunPosition, 0);
     
     // Update description
     document.getElementById('val-desc').textContent = d.desc || '';
@@ -78,7 +80,7 @@ function updateLabels() {
 /**
  * Calculate and display all metrics for the selected object
  */
-export function calculateAllMetrics(mesh, sunPos) {
+export function calculateAllMetrics(mesh, sunPos, dt = 0) {
     if (!mesh || !mesh.userData) return;
     
     const data = mesh.userData;
@@ -91,22 +93,47 @@ export function calculateAllMetrics(mesh, sunPos) {
     // Calculate distance to sun in simulation units
     const distanceSimUnits = worldPos.distanceTo(sunPos);
     
-    // Convert simulation units to real AU
-    // For planets: orbitRad = data.orbit * CONFIG.scale.orbit + CONFIG.scale.sun
-    // So: realDistanceAU = (distanceSimUnits - CONFIG.scale.sun) / CONFIG.scale.orbit
-    // For comets: they use direct position, so we use a different conversion
+    // Use elliptical orbit data if available
     let realDistanceAU;
-    if (data.orbit !== undefined && data.orbit !== null) {
+    let realDistanceMeters;
+    let orbitalVel;
+    
+    if (data.pivot && data.pivot.userData.type === 'ellipticalOrbit') {
+        // Elliptical orbit: use stored orbital parameters
+        const orbitData = data.pivot.userData;
+        if (orbitData.semiMajorAxisAU) {
+            // Calculate distance from true anomaly
+            const trueAnomaly = orbitData.trueAnomaly || 0;
+            realDistanceMeters = calculateEllipticalDistance(
+                orbitData.semiMajorAxisMeters,
+                orbitData.eccentricity,
+                trueAnomaly
+            );
+            realDistanceAU = realDistanceMeters / AU;
+            
+            // Calculate orbital velocity using vis-viva equation
+            orbitalVel = calculateOrbitalVelocityElliptical(
+                realDistanceMeters,
+                orbitData.semiMajorAxisMeters
+            );
+        } else {
+            // Fallback for moons
+            realDistanceAU = Math.max(0.01, distanceSimUnits / CONFIG.scale.orbit);
+            realDistanceMeters = realDistanceAU * AU;
+            orbitalVel = calculateOrbitalVelocity(realDistanceMeters);
+        }
+    } else if (data.orbit !== undefined && data.orbit !== null) {
         // Planets and dwarfs: use the formula based on pivot structure
         realDistanceAU = Math.max(0.01, (distanceSimUnits - CONFIG.scale.sun) / CONFIG.scale.orbit);
+        realDistanceMeters = realDistanceAU * AU;
+        orbitalVel = calculateOrbitalVelocity(realDistanceMeters);
     } else {
-        // Comets and other objects: direct distance conversion (approx scale 10 per AU based on comet code)
-        // Comets use scale = 10, and perihelion * 5 for distance
-        // Approximate conversion: 1 sim unit ≈ 0.1 AU (rough estimate)
+        // Comets and other objects: direct distance conversion
         const simUnitsPerAU = CONFIG.scale.orbit || 80;
         realDistanceAU = Math.max(0.01, distanceSimUnits / simUnitsPerAU);
+        realDistanceMeters = realDistanceAU * AU;
+        orbitalVel = calculateOrbitalVelocity(realDistanceMeters);
     }
-    const realDistanceMeters = realDistanceAU * AU;
     
     // Planet name
     document.getElementById('val-name').textContent = data.name || '-';
@@ -116,7 +143,6 @@ export function calculateAllMetrics(mesh, sunPos) {
         `${realDistanceAU.toFixed(3)} ${t('unit.au')}`;
     
     // Orbital velocity (m/s)
-    const orbitalVel = calculateOrbitalVelocity(realDistanceMeters);
     document.getElementById('val-orbital-speed').textContent = 
         `${orbitalVel.toFixed(1)} ${t('unit.ms')}`;
     
@@ -183,27 +209,56 @@ export function calculateAllMetrics(mesh, sunPos) {
         document.getElementById('val-rotation-angular-vel').textContent = '-';
     }
     
-    // Real-time rotational speed (rad/s) - same as angular velocity for now
-    if (data.rotationPeriod !== undefined && data.rotationPeriod !== 0) {
-        const angularVel = calculateRotationAngularVelocity(data.rotationPeriod);
-        document.getElementById('val-rotation-speed').textContent = 
-            `${angularVel.toFixed(3)} ${t('unit.rads')}`;
+    // Real-time rotational speed (rad/s) - calculate from actual mesh rotation
+    let realtimeAngularVel = 0;
+    let realtimeAngularAccel = 0;
+    
+    if (dt > 0) {
+        const currentRotation = mesh.rotation.y;
+        const currentTime = Date.now() / 1000; // in seconds
+        
+        // Handle rotation wrap-around (0 to 2π)
+        let deltaRotation = currentRotation - previousRotation;
+        if (deltaRotation > Math.PI) deltaRotation -= 2 * Math.PI;
+        if (deltaRotation < -Math.PI) deltaRotation += 2 * Math.PI;
+        
+        // Calculate angular velocity
+        realtimeAngularVel = deltaRotation / dt;
+        
+        // Calculate angular acceleration
+        if (lastUpdateTime > 0 && dt > 0) {
+            const prevAngularVel = previousAngularVelocity;
+            realtimeAngularAccel = (realtimeAngularVel - prevAngularVel) / dt;
+        }
+        
+        // Update stored values
+        previousRotation = currentRotation;
+        previousAngularVelocity = realtimeAngularVel;
+        lastUpdateTime = currentTime;
     } else {
-        document.getElementById('val-rotation-speed').textContent = '-';
+        // First frame: use theoretical value
+        if (data.rotationPeriod !== undefined && data.rotationPeriod !== 0) {
+            const direction = data.rotationPeriod < 0 ? -1 : 1;
+            realtimeAngularVel = calculateRotationAngularVelocity(data.rotationPeriod) * direction;
+            previousRotation = mesh.rotation.y;
+            previousAngularVelocity = realtimeAngularVel;
+        }
     }
     
-    // Real-time rotational acceleration (rad/s²) - simplified to 0 for constant rotation
-    // In reality, this would be calculated based on angular velocity changes
+    document.getElementById('val-rotation-speed').textContent = 
+        `${realtimeAngularVel.toFixed(3)} ${t('unit.rads')}`;
+    
+    // Real-time rotational acceleration (rad/s²)
     document.getElementById('val-rotation-accel').textContent = 
-        `0.000 ${t('unit.rads2')}`;
+        `${realtimeAngularAccel.toFixed(6)} ${t('unit.rads2')}`;
 }
 
 /**
  * Update dashboard in real-time (called from animation loop)
  */
-export function updateDashboardRealTime(mesh, sunPos) {
+export function updateDashboardRealTime(mesh, sunPos, dt) {
     if (mesh && mesh === currentMesh) {
-        calculateAllMetrics(mesh, sunPos);
+        calculateAllMetrics(mesh, sunPos, dt);
     }
 }
 
@@ -213,6 +268,6 @@ export function updateDashboardRealTime(mesh, sunPos) {
 export function refreshDashboard() {
     updateLabels();
     if (currentMesh) {
-        calculateAllMetrics(currentMesh, sunPosition);
+        calculateAllMetrics(currentMesh, sunPosition, 0);
     }
 }
