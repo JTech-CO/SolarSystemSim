@@ -11,20 +11,41 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
     const clock = new THREE.Clock();
     let time = 0;
     const sunPosition = new THREE.Vector3(0, 0, 0);
+    
+    // Debug: Log initial state (only once)
+    let debugLogged = false;
 
     function animate() {
         requestAnimationFrame(animate);
         const dt = clock.getDelta();
         const realDt = dt * CONFIG.speed;
         time += realDt;
+        
+        // Debug: Log initial state once
+        if (!debugLogged && updateables.length > 0) {
+            console.log(`[Debug] updateables count: ${updateables.length}`);
+            const ellipticalOrbits = updateables.filter(item => item.type === 'ellipticalOrbit');
+            const rotations = updateables.filter(item => item.type === 'rotate');
+            console.log(`[Debug] ellipticalOrbit items: ${ellipticalOrbits.length}, rotate items: ${rotations.length}`);
+            if (ellipticalOrbits.length > 0) {
+                const firstOrbit = ellipticalOrbits[0];
+                console.log(`[Debug] First orbit data:`, {
+                    hasOrbitalPeriod: !!firstOrbit.obj.userData.orbitalPeriod,
+                    initialTime: firstOrbit.obj.userData.time,
+                    initialMeanAnomaly: firstOrbit.obj.userData.meanAnomaly
+                });
+            }
+            debugLogged = true;
+        }
 
         updateables.forEach(item => {
             if (item.type === 'ellipticalOrbit') {
                 const orbitData = item.obj.userData;
                 const mesh = item.mesh;
                 
-                // Update time
-                orbitData.time += realDt;
+                // Update time using actual physical time (dt) for orbital mechanics
+                // CONFIG.speed is for simulation speed control, but orbital physics needs real time
+                orbitData.time += dt;
                 
                 // Calculate mean anomaly
                 if (orbitData.orbitalPeriod) {
@@ -36,6 +57,7 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
                 } else {
                     // Fallback: use speed for circular approximation (for moons without orbitalPeriod)
                     // speed is relative, so we use a simple angular velocity approximation
+                    // Use dt for consistency with orbital physics
                     const angularVel = orbitData.speed * 0.05; // Convert speed to angular velocity
                     orbitData.meanAnomaly = orbitData.initialMeanAnomaly + angularVel * orbitData.time;
                     // Normalize
@@ -62,14 +84,15 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
                 
             } else if (item.type === 'rotate') {
                 // Apply planet-specific rotation speed
+                // Use actual physical time (dt) for consistency with orbital mechanics
                 if (item.rotationPeriod !== undefined && item.rotationPeriod !== 0) {
                     const angularVel = calculateRotationAngularVelocity(item.rotationPeriod);
                     // Determine rotation direction (negative for retrograde)
                     const direction = item.rotationPeriod < 0 ? -1 : 1;
-                    item.obj.rotation.y += angularVel * direction * realDt;
+                    item.obj.rotation.y += angularVel * direction * dt;
                 } else {
                     // Fallback: default rotation speed
-                    item.obj.rotation.y += 0.2 * realDt;
+                    item.obj.rotation.y += 0.2 * dt;
                 }
             }
         });
@@ -86,8 +109,9 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
             selectedTarget.current.getWorldPosition(targetPos);
             
             // Update dashboard with real-time metrics
+            // Use actual physical time (dt) for accurate real-time calculations
             if (updateDashboardRealTime) {
-                updateDashboardRealTime(selectedTarget.current, sunPosition, realDt);
+                updateDashboardRealTime(selectedTarget.current, sunPosition, dt);
             }
 
             controls.target.lerp(targetPos, 0.1);
