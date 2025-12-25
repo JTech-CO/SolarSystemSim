@@ -18,35 +18,14 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
         const realDt = dt * CONFIG.speed;
         time += realDt;
 
-        // Debug: Log updateables status (first frame only)
-        if (time < 0.1 && updateables.length > 0) {
-            console.log('[Debug] updateables count:', updateables.length);
-            const ellipticalOrbits = updateables.filter(item => item.type === 'ellipticalOrbit');
-            const rotations = updateables.filter(item => item.type === 'rotate');
-            console.log('[Debug] ellipticalOrbit:', ellipticalOrbits.length, 'rotate:', rotations.length);
-            if (ellipticalOrbits.length > 0) {
-                const first = ellipticalOrbits[0];
-                console.log('[Debug] First orbit:', {
-                    hasMesh: !!first.mesh,
-                    hasObj: !!first.obj,
-                    orbitalPeriod: first.obj?.userData?.orbitalPeriod,
-                    time: first.obj?.userData?.time,
-                    meanAnomaly: first.obj?.userData?.meanAnomaly
-                });
-            }
-        }
-
         updateables.forEach(item => {
             if (item.type === 'ellipticalOrbit') {
                 const orbitData = item.obj.userData;
                 const mesh = item.mesh;
                 
-                if (!orbitData || !mesh) {
-                    console.warn('[Debug] Invalid ellipticalOrbit item:', item);
-                    return;
-                }
+                if (!orbitData || !mesh) return;
                 
-                orbitData.time += dt;
+                orbitData.time += dt * CONFIG.timeMultiplier;
                 
                 if (orbitData.orbitalPeriod) {
                     orbitData.meanAnomaly = calculateMeanAnomaly(
@@ -69,39 +48,22 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
                 );
                 
                 const baseDistance = orbitData.isMoon ? 0 : CONFIG.scale.sun;
-                const newX = baseDistance + distanceSim * Math.cos(orbitData.trueAnomaly);
-                const newZ = distanceSim * Math.sin(orbitData.trueAnomaly);
-                
-                // Debug: Log position changes for first planet (first few frames)
-                if (time < 1.0 && mesh.userData?.name === 'Mercury') {
-                    console.log('[Debug] Mercury position update:', {
-                        time: orbitData.time.toFixed(3),
-                        meanAnomaly: orbitData.meanAnomaly.toFixed(6),
-                        trueAnomaly: orbitData.trueAnomaly.toFixed(6),
-                        distanceSim: distanceSim.toFixed(2),
-                        oldX: mesh.position.x.toFixed(2),
-                        newX: newX.toFixed(2),
-                        oldZ: mesh.position.z.toFixed(2),
-                        newZ: newZ.toFixed(2)
-                    });
-                }
-                
-                mesh.position.x = newX;
-                mesh.position.z = newZ;
+                mesh.position.x = baseDistance + distanceSim * Math.cos(orbitData.trueAnomaly);
+                mesh.position.z = distanceSim * Math.sin(orbitData.trueAnomaly);
                 mesh.position.y = 0;
                 
             } else if (item.type === 'rotate') {
                 if (item.rotationPeriod !== undefined && item.rotationPeriod !== 0) {
                     const angularVel = calculateRotationAngularVelocity(item.rotationPeriod);
                     const direction = item.rotationPeriod < 0 ? -1 : 1;
-                    item.obj.rotation.y += angularVel * direction * dt;
+                    item.obj.rotation.y += angularVel * direction * dt * CONFIG.timeMultiplier;
                 } else {
-                    item.obj.rotation.y += 0.2 * dt;
+                    item.obj.rotation.y += 0.2 * dt * CONFIG.timeMultiplier;
                 }
             }
         });
 
-        cometSystems.forEach(sys => sys.update(dt));
+        cometSystems.forEach(sys => sys.update(dt * CONFIG.timeMultiplier));
 
         if (sun) {
             sun.children[0].material.opacity = 0.8 + Math.sin(time * 3) * 0.1;
@@ -116,7 +78,14 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
                 updateDashboardRealTime(selectedTarget.current, sunPosition, dt);
             }
 
-            controls.target.lerp(targetPos, 0.1);
+            // Only update target if user is not manually controlling
+            if (!controls.isUserControlling || !controls.isUserControlling()) {
+                controls.target.lerp(targetPos, 0.1);
+            } else {
+                // User is dragging, but still update target position to follow the object
+                // Use a slower lerp to allow user control while maintaining focus
+                controls.target.lerp(targetPos, 0.05);
+            }
         }
 
         renderer.render(scene, camera);
