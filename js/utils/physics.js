@@ -227,9 +227,12 @@ export function calculateTrueAnomaly(meanAnomaly, eccentricity) {
 export function calculateMeanAnomaly(time, orbitalPeriod, initialMeanAnomaly = 0) {
     const periodSeconds = orbitalPeriod * 24 * 3600; // Convert days to seconds
     const meanMotion = (2 * Math.PI) / periodSeconds; // radians per second
-    const meanAnomaly = initialMeanAnomaly + meanMotion * time;
+    let meanAnomaly = initialMeanAnomaly + meanMotion * time;
     
     // Normalize to [0, 2π]
-    return meanAnomaly % (2 * Math.PI);
+    while (meanAnomaly < 0) meanAnomaly += 2 * Math.PI;
+    while (meanAnomaly >= 2 * Math.PI) meanAnomaly -= 2 * Math.PI;
+    
+    return meanAnomaly;
 }
 
