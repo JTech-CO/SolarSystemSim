@@ -39,7 +39,9 @@ const translations = {
         'ui.topView': 'Top View',
         'ui.language': 'Language',
         'ui.korean': '한국어',
-        'ui.english': 'English'
+        'ui.english': 'English',
+        'ui.speed': '속도',
+        'ui.speedLabel': '속도'
     },
     en: {
         // Dashboard headers
@@ -80,7 +82,9 @@ const translations = {
         'ui.topView': 'Top View',
         'ui.language': 'Language',
         'ui.korean': '한국어',
-        'ui.english': 'English'
+        'ui.english': 'English',
+        'ui.speed': 'Speed',
+        'ui.speedLabel': 'Speed'
     }
 };
 
