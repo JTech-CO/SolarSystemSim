@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { generateTexture } from '../utils/textureGenerator.js';
-import { AU } from '../utils/physics.js';
+import { AU, calculateTrueAnomaly, calculateEllipticalDistance } from '../utils/physics.js';
 
 export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwarfs) {
     const allBodies = [...planets, ...dwarfs];
@@ -43,8 +43,20 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
         });
         const mesh = new THREE.Mesh(geo, mat);
         
-        // Initial position will be set in animation loop
-        mesh.position.x = semiMajorAxisSim + CONFIG.scale.sun;
+        // Calculate initial true anomaly and position
+        const initialTrueAnomaly = calculateTrueAnomaly(initialMeanAnomaly, eccentricity);
+        const initialDistanceSim = calculateEllipticalDistance(
+            semiMajorAxisSim,
+            eccentricity,
+            initialTrueAnomaly
+        );
+        mesh.position.x = CONFIG.scale.sun + initialDistanceSim * Math.cos(initialTrueAnomaly);
+        mesh.position.z = initialDistanceSim * Math.sin(initialTrueAnomaly);
+        mesh.position.y = 0;
+        
+        // Store initial true anomaly in orbitData
+        pivot.userData.trueAnomaly = initialTrueAnomaly;
+        
         mesh.userData = { ...data, isBody: true, pivot: pivot };
         pivot.add(mesh);
         objects.push(mesh);
@@ -92,7 +104,20 @@ export function createPlanetsAndDwarfs(scene, objects, updateables, planets, dwa
                 const mMat = new THREE.MeshStandardMaterial({ color: m.color[0] });
                 const mMesh = new THREE.Mesh(mGeo, mMat);
                 
-                mMesh.position.x = moonSemiMajorAxisSim;
+                // Calculate initial position for moon
+                const moonInitialTrueAnomaly = calculateTrueAnomaly(moonInitialMeanAnomaly, moonEccentricity);
+                const moonInitialDistanceSim = calculateEllipticalDistance(
+                    moonSemiMajorAxisSim,
+                    moonEccentricity,
+                    moonInitialTrueAnomaly
+                );
+                mMesh.position.x = moonInitialDistanceSim * Math.cos(moonInitialTrueAnomaly);
+                mMesh.position.z = moonInitialDistanceSim * Math.sin(moonInitialTrueAnomaly);
+                mMesh.position.y = 0;
+                
+                // Store initial true anomaly
+                mPivot.userData.trueAnomaly = moonInitialTrueAnomaly;
+                
                 mMesh.userData = { ...m, type: "Moon", isBody: true, parentName: data.name, pivot: mPivot };
                 mPivot.add(mMesh);
                 objects.push(mMesh);
