@@ -30,7 +30,16 @@ export const PLANETS = [
         rotationPeriod: 23.934, // hours
         surfaceGravity: 9.82, // m/s²
         eccentricity: 0.0167, // orbital eccentricity
-        moons: [{ name: "Moon", size: 0.27, orbit: 2.5, speed: 2, color: ["#ccc", "#999"], eccentricity: 0.0549 }]
+        moons: [{ 
+            name: "Moon", 
+            size: 0.27, 
+            orbit: 2.5, 
+            speed: 2, 
+            color: ["#ccc", "#999"], 
+            eccentricity: 0.0549,
+            orbitalPeriod: 27.322, // days (NASA)
+            rotationPeriod: 655.728 // hours (27.322 days, tidally locked)
+        }]
     },
     {
         name: "Mars", type: "Planet", color: ["#da4e3c", "#8c2a1d"], size: 0.53, orbit: 1.5, speed: 2.4,
@@ -42,8 +51,26 @@ export const PLANETS = [
         surfaceGravity: 3.71, // m/s²
         eccentricity: 0.093, // orbital eccentricity
         moons: [
-            { name: "Phobos", size: 0.08, orbit: 1.2, speed: 4, color: ["#777", "#555"], eccentricity: 0.0151 },
-            { name: "Deimos", size: 0.05, orbit: 1.8, speed: 3, color: ["#888", "#666"], eccentricity: 0.0002 }
+            { 
+                name: "Phobos", 
+                size: 0.08, 
+                orbit: 1.2, 
+                speed: 4, 
+                color: ["#777", "#555"], 
+                eccentricity: 0.0151,
+                orbitalPeriod: 0.3189, // days (NASA)
+                rotationPeriod: 7.6536 // hours (tidally locked)
+            },
+            { 
+                name: "Deimos", 
+                size: 0.05, 
+                orbit: 1.8, 
+                speed: 3, 
+                color: ["#888", "#666"], 
+                eccentricity: 0.0002,
+                orbitalPeriod: 1.262, // days (NASA)
+                rotationPeriod: 30.288 // hours (tidally locked)
+            }
         ]
     },
     {
@@ -56,10 +83,46 @@ export const PLANETS = [
         surfaceGravity: 24.79, // m/s² (at cloud tops)
         eccentricity: 0.048, // orbital eccentricity
         moons: [
-            { name: "Io", size: 0.28, orbit: 13, speed: 2.5, color: ["#ddcc55", "#aa8833"], eccentricity: 0.0041 },
-            { name: "Europa", size: 0.25, orbit: 16, speed: 2.0, color: ["#ddeecc", "#bbccdd"], eccentricity: 0.009 },
-            { name: "Ganymede", size: 0.41, orbit: 20, speed: 1.5, color: ["#998877", "#665544"], eccentricity: 0.0013 },
-            { name: "Callisto", size: 0.38, orbit: 26, speed: 1.0, color: ["#665555", "#443333"], eccentricity: 0.0074 }
+            { 
+                name: "Io", 
+                size: 0.28, 
+                orbit: 13, 
+                speed: 2.5, 
+                color: ["#ddcc55", "#aa8833"], 
+                eccentricity: 0.0041,
+                orbitalPeriod: 1.769, // days (NASA)
+                rotationPeriod: 42.456 // hours (tidally locked)
+            },
+            { 
+                name: "Europa", 
+                size: 0.25, 
+                orbit: 16, 
+                speed: 2.0, 
+                color: ["#ddeecc", "#bbccdd"], 
+                eccentricity: 0.009,
+                orbitalPeriod: 3.551, // days (NASA)
+                rotationPeriod: 85.224 // hours (tidally locked)
+            },
+            { 
+                name: "Ganymede", 
+                size: 0.41, 
+                orbit: 20, 
+                speed: 1.5, 
+                color: ["#998877", "#665544"], 
+                eccentricity: 0.0013,
+                orbitalPeriod: 7.155, // days (NASA)
+                rotationPeriod: 171.72 // hours (tidally locked)
+            },
+            { 
+                name: "Callisto", 
+                size: 0.38, 
+                orbit: 26, 
+                speed: 1.0, 
+                color: ["#665555", "#443333"], 
+                eccentricity: 0.0074,
+                orbitalPeriod: 16.689, // days (NASA)
+                rotationPeriod: 400.536 // hours (tidally locked)
+            }
         ]
     },
     {
@@ -71,7 +134,16 @@ export const PLANETS = [
         rotationPeriod: 10.656, // hours
         surfaceGravity: 10.44, // m/s² (at cloud tops)
         eccentricity: 0.056, // orbital eccentricity
-        moons: [{ name: "Titan", size: 0.4, orbit: 18, speed: 1.2, color: ["#ccaa33", "#997722"], eccentricity: 0.0288 }]
+        moons: [{ 
+            name: "Titan", 
+            size: 0.4, 
+            orbit: 18, 
+            speed: 1.2, 
+            color: ["#ccaa33", "#997722"], 
+            eccentricity: 0.0288,
+            orbitalPeriod: 15.945, // days (NASA)
+            rotationPeriod: 382.68 // hours (tidally locked)
+        }]
     },
     {
         name: "Uranus", type: "Planet", color: ["#d1e7e7", "#aaddff"], size: 4, orbit: 19.2, speed: 0.68,
@@ -93,7 +165,16 @@ export const PLANETS = [
         rotationPeriod: 16.11, // hours
         surfaceGravity: 11.15, // m/s² (at cloud tops)
         eccentricity: 0.009, // orbital eccentricity
-        moons: [{ name: "Triton", size: 0.21, orbit: 5, speed: -1.5, color: ["#ddd", "#bbb"], eccentricity: 0.000016 }]
+        moons: [{ 
+            name: "Triton", 
+            size: 0.21, 
+            orbit: 5, 
+            speed: -1.5, 
+            color: ["#ddd", "#bbb"], 
+            eccentricity: 0.000016,
+            orbitalPeriod: 5.877, // days (NASA, retrograde)
+            rotationPeriod: -141.048 // hours (tidally locked, retrograde)
+        }]
     }
 ];
 
