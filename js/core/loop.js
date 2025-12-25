@@ -34,8 +34,13 @@ export function createAnimationLoop(scene, camera, renderer, controls, updateabl
                         orbitData.initialMeanAnomaly
                     );
                 } else {
-                    // Fallback: use speed for circular approximation
-                    orbitData.meanAnomaly = (orbitData.initialMeanAnomaly + orbitData.speed * 0.05 * time) % (2 * Math.PI);
+                    // Fallback: use speed for circular approximation (for moons without orbitalPeriod)
+                    // speed is relative, so we use a simple angular velocity approximation
+                    const angularVel = orbitData.speed * 0.05; // Convert speed to angular velocity
+                    orbitData.meanAnomaly = orbitData.initialMeanAnomaly + angularVel * orbitData.time;
+                    // Normalize
+                    while (orbitData.meanAnomaly < 0) orbitData.meanAnomaly += 2 * Math.PI;
+                    while (orbitData.meanAnomaly >= 2 * Math.PI) orbitData.meanAnomaly -= 2 * Math.PI;
                 }
                 
                 // Calculate true anomaly
